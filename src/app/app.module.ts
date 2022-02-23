@@ -22,9 +22,9 @@ let msalInstance: IPublicClientApplication | undefined = undefined;
 export function MSALInstanceFactory(): IPublicClientApplication {
   msalInstance = msalInstance ?? new PublicClientApplication({
     auth: {
-      clientId: 'a2bae37b-f283-44e3-9e20-cb0113a11d4b', // TOS Client Id
+      //clientId: 'a2bae37b-f283-44e3-9e20-cb0113a11d4b', // TOS Client Id
       authority: 'https://login.microsoftonline.com/81fa766e-a349-4867-8bf4-ab35e250a08f',
-      // clientId: OAuthSettings.appId,
+      clientId: OAuthSettings.appId,
       redirectUri: OAuthSettings.redirectUri,
       postLogoutRedirectUri: OAuthSettings.redirectUri
     },

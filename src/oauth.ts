@@ -3,7 +3,6 @@ export const OAuthSettings = {
     redirectUri: 'http://localhost:4200',
     scopes: [
       "user.read",
-    //   "mailboxsettings.read",
-    //   "calendars.readwrite"
+      //"user.readbasic.all"
     ]
   };
