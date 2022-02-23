@@ -33,14 +33,6 @@ export class AuthService {
     this.getUser().then((user) => {this.user = user});
   }
 
-  // constructor(
-  //   private msalService: MsalService,
-  //   private alertsService: AlertsService) {
-
-  //   this.authenticated = false;
-  //   this.user = undefined;
-  // }
-
   // Prompt the user to sign in and
   // grant consent to the requested permission scopes
   async signIn(): Promise<void> {
@@ -103,8 +95,6 @@ export class AuthService {
     .api('/me/photo/$value')
     //.select('displayName,userPrincipalName')
     .get();
-
-    console.log('photo', photo);
   
     const user = new User();
     user.displayName = graphUser.displayName ?? '';
@@ -112,16 +102,23 @@ export class AuthService {
     user.email =  graphUser.userPrincipalName ?? '';
     user.timeZone = 'UTC';
   
-    // Use default avatar
-    //let objectURL = URL.createObjectURL(photo);       
+    // Use default avatar     
     const fileReader = new FileReader()
     fileReader.readAsDataURL(photo)
     fileReader.onloadend = function() {
       // result includes identifier 'data:image/png;base64,' plus the base64 data
       user.avatar = fileReader.result as string;     
    }
-    //user.avatar = this.sanitizer.bypassSecurityTrustUrl(objectURL);
-    //user.avatar = '/assets/no-profile-photo.png';
+
+   //  Group members
+   //groups/be4ded57-f480-41a6-8825-564f44fad525/members?$count=true
+   const groupMembers = await this.graphClient
+    //.api('/groups/be4ded57-f480-41a6-8825-564f44fad525/members?$count=true')
+    .api('/groups/b9738c5e-1195-4baf-9580-1aa33d30c822/members?$count=true')
+    //.select('displayName,userPrincipalName')
+    .get();
+
+    console.log('groupMembers', JSON.stringify(groupMembers));
   
     return user;
   }
