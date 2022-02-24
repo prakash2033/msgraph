@@ -16,6 +16,8 @@ import {
 } from '@azure/msal-browser';
 import { MsalModule, MsalService, MSAL_INSTANCE } from '@azure/msal-angular';
 import { OAuthSettings } from '../oauth';
+import { ProdUsersComponent } from './prod-users/prod-users.component';
+import { NonProdUsersComponent } from './non-prod-users/non-prod-users.component';
 
 let msalInstance: IPublicClientApplication | undefined = undefined;
 
@@ -40,7 +42,7 @@ export function MSALInstanceFactory(): IPublicClientApplication {
 }
 
 @NgModule({
-  declarations: [AppComponent, NavBarComponent, HomeComponent, AlertsComponent],
+  declarations: [AppComponent, NavBarComponent, HomeComponent, AlertsComponent, ProdUsersComponent, NonProdUsersComponent],
   imports: [
     BrowserModule,
     AppRoutingModule,

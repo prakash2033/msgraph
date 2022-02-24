@@ -18,7 +18,8 @@ export class AuthService {
   public authenticated: boolean;
   public user?: User;
   public graphClient?: Client;
-  public users?: User[];
+  public productionUsers?: User[];
+  public nonProductionUsers?: User[];
 
   constructor(
     private msalService: MsalService,
@@ -27,12 +28,19 @@ export class AuthService {
   ) {
     const accounts = this.msalService.instance.getAllAccounts();
     this.authenticated = accounts.length > 0;
+
     if (this.authenticated) {
       this.msalService.instance.setActiveAccount(accounts[0]);
     }
-    this.getUsers().then((users) => {
-      this.users = users;
+
+    this.getProductionUsers().then((users) => {
+      this.productionUsers = users;
     });
+
+    this.getNonProductionUsers().then((users) => {
+      this.nonProductionUsers = users;
+    });
+
     this.getUser().then((user) => {
       this.user = user;
     });
@@ -86,26 +94,16 @@ export class AuthService {
     // Get the user from Graph (GET /me)
     const graphUser: MicrosoftGraph.User = await this.graphClient
       .api('/me')
-      //.select('displayName,userPrincipalName')
       .get();
-
-    //console.log('user', JSON.stringify(graphUser));
 
     const memberOf = await this.graphClient
       .api('/me/memberOf/be4ded57-f480-41a6-8825-564f44fad525')
-      //.select('displayName,userPrincipalName')
       .get();
 
-    //console.log('memberOf', JSON.stringify(memberOf));
-
-    const photo = await this.graphClient
-      .api('/me/photo/$value')
-      //.select('displayName,userPrincipalName')
-      .get();
+    const photo = await this.graphClient.api('/me/photo/$value').get();
 
     const user = new User();
     user.displayName = graphUser.displayName ?? '';
-    // Prefer the mail property, but fall back to userPrincipalName
     user.email = graphUser.userPrincipalName ?? '';
     user.timeZone = 'UTC';
 
@@ -113,24 +111,13 @@ export class AuthService {
     const fileReader = new FileReader();
     fileReader.readAsDataURL(photo);
     fileReader.onloadend = function () {
-      // result includes identifier 'data:image/png;base64,' plus the base64 data
       user.avatar = fileReader.result as string;
     };
-
-    //  Group members
-    //groups/be4ded57-f480-41a6-8825-564f44fad525/members?$count=true
-    //const groupMembers = await this.graphClient
-    //.api('/groups/be4ded57-f480-41a6-8825-564f44fad525/members?$count=true')
-    //.api('/groups/b9738c5e-1195-4baf-9580-1aa33d30c822/members?$count=true')
-    //.select('displayName,userPrincipalName')
-    //.get();
-
-    //console.log('groupMembers', JSON.stringify(groupMembers));
 
     return user;
   }
 
-  private async getUsers(): Promise<User[] | undefined> {
+  private async getProductionUsers(): Promise<User[] | undefined> {
     if (!this.authenticated) return undefined;
 
     // Create an authentication provider for the current user
@@ -150,11 +137,69 @@ export class AuthService {
 
     let users: User[] = [];
     //  Group members
-    //groups/be4ded57-f480-41a6-8825-564f44fad525/members?$count=true
     const groupMembers = await this.graphClient
       .api('/groups/be4ded57-f480-41a6-8825-564f44fad525/members?$count=true')
-      //.api('/groups/b9738c5e-1195-4baf-9580-1aa33d30c822/members?$count=true')
-      //.select('displayName,userPrincipalName')
+      .get();
+
+    console.log('groupMembers', JSON.stringify(groupMembers));
+    for (const member of groupMembers.value) {
+      console.log(member);
+      let profilePicture;
+
+      try {
+        let photo = await this.graphClient
+          ?.api(`/users/${member.id}/photo/$value`)
+          .get();
+
+        console.log(photo);
+
+        const fileReader = new FileReader();
+        fileReader.readAsDataURL(photo);
+        fileReader.onloadend = function () {
+          // result includes identifier 'data:image/png;base64,' plus the base64 data
+          users.push({
+            displayName: member.displayName,
+            email: member.userPrincipalName,
+            avatar: fileReader.result as string,
+            timeZone: 'UTC',
+          });
+        };
+      } catch {
+        users.push({
+          displayName: member.displayName,
+          email: member.userPrincipalName,
+          avatar: '/assets/no-profile-photo.png',
+          timeZone: 'UTC',
+        });
+      }
+      console.log(profilePicture);
+    }
+
+    return users;
+  }
+
+  private async getNonProductionUsers(): Promise<User[] | undefined> {
+    if (!this.authenticated) return undefined;
+
+    // Create an authentication provider for the current user
+    const authProvider = new AuthCodeMSALBrowserAuthenticationProvider(
+      this.msalService.instance as PublicClientApplication,
+      {
+        account: this.msalService.instance.getActiveAccount()!,
+        scopes: OAuthSettings.scopes,
+        interactionType: InteractionType.Popup,
+      }
+    );
+
+    // Initialize the Graph client
+    this.graphClient = Client.initWithMiddleware({
+      authProvider: authProvider,
+    });
+
+    let users: User[] = [];
+    //  Group members
+    const groupMembers = await this.graphClient
+      .api('/groups/1442a75e-c15d-46a1-94b1-5fbb38f2b7f4/members?$count=true')
       .get();
 
     console.log('groupMembers', JSON.stringify(groupMembers));

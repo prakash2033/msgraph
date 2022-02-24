@@ -18,10 +18,6 @@ export class HomeComponent implements OnInit {
     return this.authService.user;
   }
 
-  get users(): User[] | undefined {
-    return this.authService.users;
-  }
-
   constructor(private authService: AuthService) {}
 
   ngOnInit() {}

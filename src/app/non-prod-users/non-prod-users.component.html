@@ -1,0 +1,13 @@
+<div class="jumbotron">
+  <h2 *ngIf="users">Non-Production Users in TOS:</h2>
+  <div *ngFor="let user of users" style="padding: 15px 15px 15px 15px">
+    <img
+      src="{{ user.avatar }}"
+      class="rounded-circle align-self-center mr-2"
+      style="width: 32px"
+    />
+    <h5 style="display: inline; margin-left: 15px">
+      {{ user.displayName }}
+    </h5>
+  </div>
+</div>
