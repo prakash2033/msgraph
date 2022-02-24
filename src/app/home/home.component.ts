@@ -6,7 +6,7 @@ import { User } from '../user';
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
-  styleUrls: ['./home.component.css']
+  styleUrls: ['./home.component.css'],
 })
 export class HomeComponent implements OnInit {
   // Is a user logged in?
@@ -18,9 +18,13 @@ export class HomeComponent implements OnInit {
     return this.authService.user;
   }
 
-  constructor(private authService: AuthService) { }
+  get users(): User[] | undefined {
+    return this.authService.users;
+  }
 
-  ngOnInit() { }
+  constructor(private authService: AuthService) {}
+
+  ngOnInit() {}
 
   async signIn(): Promise<void> {
     await this.authService.signIn();
