@@ -6,10 +6,9 @@ import { User } from '../user';
 @Component({
   selector: 'app-nav-bar',
   templateUrl: './nav-bar.component.html',
-  styleUrls: ['./nav-bar.component.css']
+  styleUrls: ['./nav-bar.component.css'],
 })
 export class NavBarComponent implements OnInit {
-
   // Should the collapsed nav show?
   showNav: boolean = false;
   // Is a user logged in?
@@ -21,9 +20,17 @@ export class NavBarComponent implements OnInit {
     return this.authService.user;
   }
 
-  constructor(private authService: AuthService) { }
+  get isProdUser(): boolean {
+    return this.authService.isProdUser;
+  }
 
-  ngOnInit() { }
+  get isNonProdUser(): boolean {
+    return this.authService.isNonProdUser;
+  }
+
+  constructor(private authService: AuthService) {}
+
+  ngOnInit() {}
 
   // Used by the Bootstrap navbar-toggler button to hide/show
   // the nav in a collapsed state

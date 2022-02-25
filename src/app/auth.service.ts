@@ -9,13 +9,14 @@ import { User } from './user';
 import { Client } from '@microsoft/microsoft-graph-client';
 import { AuthCodeMSALBrowserAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/authCodeMsalBrowser';
 import * as MicrosoftGraph from '@microsoft/microsoft-graph-types';
-import { DomSanitizer } from '@angular/platform-browser';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
   public authenticated: boolean;
+  public isProdUser: boolean = false;
+  public isNonProdUser: boolean = false;
   public user?: User;
   public graphClient?: Client;
   public productionUsers?: User[];
@@ -23,27 +24,33 @@ export class AuthService {
 
   constructor(
     private msalService: MsalService,
-    private alertsService: AlertsService,
-    private sanitizer: DomSanitizer
+    private alertsService: AlertsService
   ) {
     const accounts = this.msalService.instance.getAllAccounts();
     this.authenticated = accounts.length > 0;
 
     if (this.authenticated) {
       this.msalService.instance.setActiveAccount(accounts[0]);
+
+      this.getProductionUsers().then((users) => {
+        this.productionUsers = users;
+      });
+
+      this.getNonProductionUsers().then((users) => {
+        this.nonProductionUsers = users;
+      });
+
+      this.userIsProdUser().then((isProdUser) => {
+        this.isProdUser = isProdUser;
+      });
+      this.userIsNonProdUser().then((isNonProdUser) => {
+        this.isNonProdUser = isNonProdUser;
+      });
+
+      this.getUser().then((user) => {
+        this.user = user;
+      });
     }
-
-    this.getProductionUsers().then((users) => {
-      this.productionUsers = users;
-    });
-
-    this.getNonProductionUsers().then((users) => {
-      this.nonProductionUsers = users;
-    });
-
-    this.getUser().then((user) => {
-      this.user = user;
-    });
   }
 
   // Prompt the user to sign in and
@@ -63,6 +70,10 @@ export class AuthService {
       this.msalService.instance.setActiveAccount(result.account);
       this.authenticated = true;
       this.user = await this.getUser();
+      this.isProdUser = await this.userIsProdUser();
+      this.isNonProdUser = await this.userIsNonProdUser();
+      this.productionUsers = await this.getProductionUsers();
+      this.nonProductionUsers = await this.getNonProductionUsers();
     }
   }
 
@@ -71,6 +82,61 @@ export class AuthService {
     await this.msalService.logout().toPromise();
     this.user = undefined;
     this.authenticated = false;
+    this.isNonProdUser = false;
+    this.isProdUser = false;
+    this.productionUsers = [];
+    this.nonProductionUsers = [];
+  }
+
+  async userIsProdUser(): Promise<boolean> {
+    const authProvider = new AuthCodeMSALBrowserAuthenticationProvider(
+      this.msalService.instance as PublicClientApplication,
+      {
+        account: this.msalService.instance.getActiveAccount()!,
+        scopes: OAuthSettings.scopes,
+        interactionType: InteractionType.Popup,
+      }
+    );
+
+    // Initialize the Graph client
+    this.graphClient = Client.initWithMiddleware({
+      authProvider: authProvider,
+    });
+
+    const memberOf = await this.graphClient
+      .api('/me/memberOf/be4ded57-f480-41a6-8825-564f44fad525')
+      .get();
+
+    console.log(memberOf ? true : false);
+
+    return memberOf ? true : false;
+  }
+
+  async userIsNonProdUser(): Promise<boolean> {
+    const authProvider = new AuthCodeMSALBrowserAuthenticationProvider(
+      this.msalService.instance as PublicClientApplication,
+      {
+        account: this.msalService.instance.getActiveAccount()!,
+        scopes: OAuthSettings.scopes,
+        interactionType: InteractionType.Popup,
+      }
+    );
+
+    // Initialize the Graph client
+    this.graphClient = Client.initWithMiddleware({
+      authProvider: authProvider,
+    });
+
+    const memberOf = await this.graphClient
+      .api('/me/memberOf/1442a75e-c15d-46a1-94b1-5fbb38f2b7f4')
+      .get()
+      .catch(() => {
+        return false;
+      });
+
+    console.log(memberOf ? true : false);
+
+    return memberOf ? true : false;
   }
 
   private async getUser(): Promise<User | undefined> {
@@ -94,10 +160,6 @@ export class AuthService {
     // Get the user from Graph (GET /me)
     const graphUser: MicrosoftGraph.User = await this.graphClient
       .api('/me')
-      .get();
-
-    const memberOf = await this.graphClient
-      .api('/me/memberOf/be4ded57-f480-41a6-8825-564f44fad525')
       .get();
 
     const photo = await this.graphClient.api('/me/photo/$value').get();
@@ -141,17 +203,11 @@ export class AuthService {
       .api('/groups/be4ded57-f480-41a6-8825-564f44fad525/members?$count=true')
       .get();
 
-    console.log('groupMembers', JSON.stringify(groupMembers));
     for (const member of groupMembers.value) {
-      console.log(member);
-      let profilePicture;
-
       try {
         let photo = await this.graphClient
           ?.api(`/users/${member.id}/photo/$value`)
           .get();
-
-        console.log(photo);
 
         const fileReader = new FileReader();
         fileReader.readAsDataURL(photo);
@@ -172,7 +228,6 @@ export class AuthService {
           timeZone: 'UTC',
         });
       }
-      console.log(profilePicture);
     }
 
     return users;
@@ -202,17 +257,11 @@ export class AuthService {
       .api('/groups/1442a75e-c15d-46a1-94b1-5fbb38f2b7f4/members?$count=true')
       .get();
 
-    console.log('groupMembers', JSON.stringify(groupMembers));
     for (const member of groupMembers.value) {
-      console.log(member);
-      let profilePicture;
-
       try {
         let photo = await this.graphClient
           ?.api(`/users/${member.id}/photo/$value`)
           .get();
-
-        console.log(photo);
 
         const fileReader = new FileReader();
         fileReader.readAsDataURL(photo);
@@ -233,7 +282,6 @@ export class AuthService {
           timeZone: 'UTC',
         });
       }
-      console.log(profilePicture);
     }
 
     return users;
